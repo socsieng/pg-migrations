@@ -25,7 +25,8 @@
     "prepublish": "npm run build"
   },
   "dependencies": {
-    "pg": "^6.1.2"
+    "pg": "^6.1.2",
+    "pg-parameters": "^0.2.2"
   },
   "devDependencies": {
     "@types/chai": "^3.0.0",
