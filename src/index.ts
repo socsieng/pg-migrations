@@ -6,6 +6,7 @@ const dbClient = new DbClient({
   user: 'postgres',
   password: 'Password01',
   database: 'postgres',
+  port: 5434,
 });
 
 const repo = new Repo(dbClient);

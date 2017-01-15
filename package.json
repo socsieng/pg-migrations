@@ -22,11 +22,14 @@
     "test": "npm run build && mocha --compilers ts:ts-node/register --recursive src/**/*-spec.ts",
     "watch": "npm run build -- --watch",
     "watch:test": "npm run test -- --watch",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test:db": "npm run test:db:start; npm run test; npm run test:db:stop",
+    "test:db:start": "docker run -p 5434:5432 --name pg-migration-postgres -e POSTGRES_PASSWORD=Password01 -d postgres",
+    "test:db:stop": "docker rm pg-migration-postgres -f"
   },
   "dependencies": {
     "pg": "^6.1.2",
-    "pg-parameters": "^0.2.2"
+    "pg-parameters": "^0.2.3"
   },
   "devDependencies": {
     "@types/chai": "^3.0.0",
