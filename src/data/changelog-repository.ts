@@ -65,7 +65,7 @@ export default class ChangelogRepository {
       create table if not exists migration_changesets (
         id serial primary key,
         file text not null,
-        name text not null,
+        name text,
         execution_type text not null check (execution_type in ('once', 'always', 'change')),
         created_at timestamp not null default current_timestamp,
         unique (file, name)
