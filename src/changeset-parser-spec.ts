@@ -98,6 +98,17 @@ create table my_other_table2(val text);
 --changeset empty
       `)).to.be.rejected;
     });
+
+    it('should throw with duplicate changeset name', async() => {
+      const promise = ChangesetParser.parseFileContent('file', `--migration
+--changeset name
+create table my_table(val text);
+--changeset name
+create table my_table(val text);
+      `);
+
+      expect(promise).to.be.rejected;
+    });
   });
 
   describe('File', async() => {

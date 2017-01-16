@@ -27,6 +27,7 @@ export default class ChangesetParser {
 
   public static async parseFileContent(filename: string, content: string): Promise<Changeset[]> {
     const changesets = [];
+    const changesetMap: any = {};
 
     if (content.indexOf(`--migration`) !== 0) {
       throw new Error('Changeset file must start with --migration');
@@ -52,14 +53,22 @@ export default class ChangesetParser {
         throw new Error(`Changeset '${filename}:${name}' is empty`);
       }
 
-      changesets.push({
+      if (name in changesetMap) {
+        throw new Error(`Duplicate changeset '${name}' already defined in ${filename}`);
+      }
+
+      const changeset = {
         file: filename,
         name,
         script,
         executionType: typeMatch ? typeMatch[1] : null,
         context: contextMatch ? contextMatch[1] : null,
         hash: computeHash(script),
-      });
+      };
+
+      changesetMap[name] = changeset;
+
+      changesets.push(changeset);
     }
 
     return changesets;
