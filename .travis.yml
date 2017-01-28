@@ -1,0 +1,11 @@
+sudo: required
+
+language: node_js
+node_js:
+  - "6"
+
+services:
+  - docker
+
+before_install:
+  - docker run -p 5434:5432 --name pg-migration-postgres -e POSTGRES_PASSWORD=Password01 -d postgres
