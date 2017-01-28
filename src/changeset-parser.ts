@@ -61,7 +61,7 @@ export default class ChangesetParser {
         file: filename,
         name,
         script,
-        executionType: typeMatch ? typeMatch[1] : null,
+        executionType: typeMatch ? typeMatch[1] : 'once',
         context: contextMatch ? contextMatch[1] : null,
         hash: computeHash(script),
       };

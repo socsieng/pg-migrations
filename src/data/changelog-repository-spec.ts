@@ -1,5 +1,6 @@
 import * as chai from 'chai';
 import { Client as DbClient } from 'pg-parameters';
+import ChangesetParser from '../changeset-parser';
 import Repo from './changelog-repository';
 
 const expect = chai.expect;
@@ -23,20 +24,45 @@ describe('ChangelogRepository', async() => {
     repo = null;
   });
 
-  it('should acquire and release lock', async() => {
-    const result = await repo.aquireLock();
-    expect(result).to.equal(true);
+  describe('lock', async() => {
+    it('should acquire and release lock', async() => {
+      const result = await repo.aquireLock();
+      expect(result).to.equal(true);
 
-    await repo.releaseLock();
+      await repo.releaseLock();
+    });
+
+    it('should not acquire lock that hasn\'t been released', async() => {
+      let result = await repo.aquireLock();
+      expect(result).to.equal(true);
+
+      result = await repo.aquireLock();
+      expect(result).to.equal(false);
+
+      await repo.releaseLock();
+    });
   });
 
-  it('should not acquire lock that hasn\'t been released', async() => {
-    let result = await repo.aquireLock();
-    expect(result).to.equal(true);
+  describe('changeset', async() => {
+    beforeEach(async() => {
+      await repo.aquireLock();
+    });
 
-    result = await repo.aquireLock();
-    expect(result).to.equal(false);
+    afterEach(async() => {
+      await repo.releaseLock();
+    });
 
-    await repo.releaseLock();
+    it('should create changeset', async() => {
+      const [ changeset ] = await ChangesetParser.parseFileContent('file', `--migration
+--changeset name
+create table my_table(val text);
+      `);
+
+      await repo.insertChangeset(changeset);
+      const dbChangeset = await repo.getChangeset(changeset.file, changeset.name);
+
+      expect(dbChangeset).to.be.ok;
+      expect(dbChangeset.hash).to.equal('5c2371b09ea6c42f8fd00e9f298ad4daa5e0e24f');
+    });
   });
 });

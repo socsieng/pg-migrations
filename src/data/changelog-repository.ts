@@ -1,4 +1,5 @@
 import { Client } from 'pg-parameters';
+import Changeset from '../changeset';
 
 export default class ChangelogRepository {
   private client: Client;
@@ -43,6 +44,43 @@ export default class ChangelogRepository {
     `, { id: this.lockId });
   }
 
+  public async validateChangeset(changeset: Changeset) {
+    const dbChangest = await this.getChangeset(changeset.file, changeset.name);
+    return !(changeset.executionType === 'once' && changeset.hash !== dbChangest.hash);
+  }
+
+  public async getChangeset(file: string, name: string) {
+    return await this.client.querySingle(`
+      select
+        cs.id,
+        cs.file,
+        cs.name,
+        cs.execution_type executionType,
+        cs.context,
+        cl.content_hash hash
+      from migration_changesets cs
+      left join migration_changelog cl on cs.id = cl.changeset_id
+      where cs.file = :file
+      and cs.name = :name
+      order by cl.executed_at desc
+      limit 1;
+    `, { file, name });
+  }
+
+  public async insertChangeset(changeset) {
+    const result = await this.client.insert('migration_changesets', {
+      file: changeset.file,
+      name: changeset.name,
+      execution_type: changeset.executionType,
+      context: changeset.context,
+    }, 'id');
+    await this.client.insert('migration_changelog', {
+      lock_id: this.lockId,
+      changeset_id: result.id,
+      content_hash: changeset.hash,
+    }, 'id');
+  }
+
   private async createMigrationTables() {
     await this.createLockTable();
     await this.createChangesetTable();
@@ -66,7 +104,8 @@ export default class ChangelogRepository {
         id serial primary key,
         file text not null,
         name text,
-        execution_type text not null check (execution_type in ('once', 'always', 'change')),
+        execution_type text not null default 'once' check (execution_type in ('once', 'always', 'change')),
+        context text,
         created_at timestamp not null default current_timestamp,
         unique (file, name)
       );
