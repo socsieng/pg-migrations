@@ -5,15 +5,15 @@ export default class ChangelogRepository {
   private client: Client;
   private lockId: number;
 
-  constructor(client: Client) {
+  constructor (client: Client) {
     this.client = client;
     this.lockId = 0;
   }
 
-  public async aquireLock(): Promise<boolean> {
+  public async aquireLock (): Promise<boolean> {
     await this.createMigrationTables();
 
-    return await this.client.withTransaction(async() => {
+    return await this.client.withTransaction(async () => {
       const { locks } = await this.client.querySingle(`
         select
           count(*)::integer as locks
@@ -35,7 +35,7 @@ export default class ChangelogRepository {
     });
   }
 
-  public async releaseLock(): Promise<void> {
+  public async releaseLock (): Promise<void> {
     await this.client.execute(`
       update migration_lock
       set
@@ -44,12 +44,12 @@ export default class ChangelogRepository {
     `, { id: this.lockId });
   }
 
-  public async validateChangeset(changeset: Changeset) {
+  public async validateChangeset (changeset: Changeset) {
     const dbChangest = await this.getChangeset(changeset.file, changeset.name);
     return !(changeset.executionType === 'once' && changeset.hash !== dbChangest.hash);
   }
 
-  public async getChangeset(file: string, name: string) {
+  public async getChangeset (file: string, name: string) {
     return await this.client.querySingle(`
       select
         cs.id,
@@ -67,7 +67,7 @@ export default class ChangelogRepository {
     `, { file, name });
   }
 
-  public async insertChangeset(changeset) {
+  public async insertChangeset (changeset) {
     const result = await this.client.insert('migration_changesets', {
       file: changeset.file,
       name: changeset.name,
@@ -81,13 +81,13 @@ export default class ChangelogRepository {
     }, 'id');
   }
 
-  private async createMigrationTables() {
+  private async createMigrationTables () {
     await this.createLockTable();
     await this.createChangesetTable();
     await this.createChangelogTable();
   }
 
-  private async createLockTable() {
+  private async createLockTable () {
     await this.client.execute(`
       create table if not exists migration_lock (
         id serial primary key,
@@ -98,7 +98,7 @@ export default class ChangelogRepository {
     `);
   }
 
-  private async createChangesetTable() {
+  private async createChangesetTable () {
     await this.client.execute(`
       create table if not exists migration_changesets (
         id serial primary key,
@@ -112,7 +112,7 @@ export default class ChangelogRepository {
     `);
   }
 
-  private async createChangelogTable() {
+  private async createChangelogTable () {
     await this.client.execute(`
       create table if not exists migration_changelog (
         id serial primary key,

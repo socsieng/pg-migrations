@@ -7,14 +7,14 @@ const changesetExpression = /^--changeset\s+(.*)$/m;
 const typeExpression = /\stype:([^\s]+)/;
 const contextExpression = /\scontext:([^\s]+)/;
 
-function computeHash(content: string): string {
+function computeHash (content: string): string {
   const hash = crypto.createHash('sha1');
   hash.update(content);
   return hash.digest('hex');
 }
 
 export default class ChangesetParser {
-  public static async parseFile(filename: string, basePath: string = '/'): Promise<Changeset[]> {
+  public static async parseFile (filename: string, basePath: string = '/'): Promise<Changeset[]> {
     const content = await fs.readFile(filename, 'utf8');
     let relativePath = path.relative(basePath, filename);
 
@@ -25,7 +25,7 @@ export default class ChangesetParser {
     return await ChangesetParser.parseFileContent(relativePath, content);
   }
 
-  public static async parseFileContent(filename: string, content: string): Promise<Changeset[]> {
+  public static async parseFileContent (filename: string, content: string): Promise<Changeset[]> {
     const changesets = [];
     const changesetMap: any = {};
 

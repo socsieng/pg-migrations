@@ -11,7 +11,7 @@ const dbClient = new DbClient({
 
 const repo = new Repo(dbClient);
 
-(async() => {
+(async () => {
   const hasLock = await repo.aquireLock();
   console.log(hasLock);
   await repo.releaseLock();
