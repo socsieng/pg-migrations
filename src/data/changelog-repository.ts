@@ -1,6 +1,11 @@
 import { Client } from 'pg-parameters';
 import Changeset from '../changeset';
 
+export interface IChangesetValidation {
+  shouldExecute: boolean;
+  messages: string[];
+}
+
 export default class ChangelogRepository {
   private client: Client;
   private lockId: number;
@@ -44,18 +49,46 @@ export default class ChangelogRepository {
     `, { id: this.lockId });
   }
 
-  public async validateChangeset (changeset: Changeset) {
+  public async validateChangeset (changeset: Changeset): Promise<IChangesetValidation> {
     const dbChangest = await this.getChangeset(changeset.file, changeset.name);
-    return !(changeset.executionType === 'once' && changeset.hash !== dbChangest.hash);
+    const validation: IChangesetValidation = {
+      shouldExecute: false,
+      messages: [],
+    };
+
+    if (dbChangest) {
+      if (dbChangest.executionType !== changeset.executionType) {
+        validation.shouldExecute = false;
+        validation.messages
+          // tslint:disable-next-line:max-line-length
+          .push(`Script execution type has changed, execution type was ${dbChangest.executionType}, is now ${changeset.executionType}`);
+      } else if (changeset.executionType === 'once') {
+        validation.shouldExecute = false;
+        if (dbChangest.hash !== changeset.hash) {
+          validation.messages
+            .push(`Script content has changed, content hash was ${dbChangest.hash}, is now ${changeset.hash}`);
+        }
+      } else if (changeset.executionType === 'always') {
+        validation.shouldExecute = true;
+      } else if (changeset.executionType === 'change') {
+        if (dbChangest.hash !== changeset.hash) {
+          validation.shouldExecute = true;
+        }
+      }
+    } else {
+      validation.shouldExecute = true;
+    }
+
+    return validation;
   }
 
-  public async getChangeset (file: string, name: string) {
+  public async getChangeset (file: string, name: string): Promise<Changeset> {
     return await this.client.querySingle(`
       select
         cs.id,
         cs.file,
         cs.name,
-        cs.execution_type executionType,
+        cs.execution_type "executionType",
         cs.context,
         cl.content_hash hash
       from migration_changesets cs
@@ -65,6 +98,17 @@ export default class ChangelogRepository {
       order by cl.executed_at desc
       limit 1;
     `, { file, name });
+  }
+
+  public async executeChangeset (changeset: Changeset) {
+    try {
+      const response = await this.client.execute(changeset.script);
+      await this.insertChangeset(changeset);
+    } catch (err) {
+      const message = `Error executing ${changeset.formatName()}\n` +
+        `${err.toString().split(/\n/g).map((e) => `  ${e}`).join('\n')}`;
+      throw new Error(message);
+    }
   }
 
   public async insertChangeset (changeset) {

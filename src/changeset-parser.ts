@@ -1,11 +1,11 @@
 import * as crypto from 'crypto';
-import * as fs from 'fs-promise';
+import * as fs from 'fs';
 import * as path from 'path';
 import Changeset from './changeset';
 
-const changesetExpression = /^--changeset\s+(.*)$/m;
-const typeExpression = /\stype:([^\s]+)/;
-const contextExpression = /\scontext:([^\s]+)/;
+const changesetExpression = /^--changeset(.*)$/m;
+const typeExpression = /type:([^\s]+)/;
+const contextExpression = /context:([^\s]+)/;
 
 function computeHash (content: string): string {
   const hash = crypto.createHash('sha1');
@@ -14,18 +14,18 @@ function computeHash (content: string): string {
 }
 
 export default class ChangesetParser {
-  public static async parseFile (filename: string, basePath: string = '/'): Promise<Changeset[]> {
-    const content = await fs.readFile(filename, 'utf8');
+  public static parseFile (filename: string, basePath: string = '/'): Changeset[] {
+    const content = fs.readFileSync(filename, 'utf8');
     let relativePath = path.relative(basePath, filename);
 
     if (basePath === '/') {
       relativePath = '/' + relativePath;
     }
 
-    return await ChangesetParser.parseFileContent(relativePath, content);
+    return ChangesetParser.parseFileContent(relativePath, content);
   }
 
-  public static async parseFileContent (filename: string, content: string): Promise<Changeset[]> {
+  public static parseFileContent (filename: string, content: string): Changeset[] {
     const changesets = [];
     const changesetMap: any = {};
 
@@ -57,14 +57,14 @@ export default class ChangesetParser {
         throw new Error(`Duplicate changeset '${name}' already defined in ${filename}`);
       }
 
-      const changeset = {
+      const changeset = new Changeset({
         file: filename,
         name,
         script,
         executionType: typeMatch ? typeMatch[1] : 'once',
         context: contextMatch ? contextMatch[1] : null,
         hash: computeHash(script),
-      };
+      });
 
       changesetMap[name] = changeset;
 

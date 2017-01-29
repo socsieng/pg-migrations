@@ -12,16 +12,16 @@ const expect = chai.expect;
 describe('ChangesetParser', async () => {
   describe('Content', async () => {
     it('should throw when content does not start with --migration', async () => {
-      expect(ChangesetParser.parseFileContent('file', '')).to.be.rejected;
+      expect(() => ChangesetParser.parseFileContent('file', '')).to.throw;
     });
 
     it('should return empty list of changesets when content only contains --migration', async () => {
-      const result = await ChangesetParser.parseFileContent('file', '--migration');
+      const result = ChangesetParser.parseFileContent('file', '--migration');
       expect(result).to.be.empty;
     });
 
     it('should return single changeset', async () => {
-      const result = await ChangesetParser.parseFileContent('file', `--migration
+      const result = ChangesetParser.parseFileContent('file', `--migration
 --changeset name
 create table my_table(val text);
       `);
@@ -35,8 +35,23 @@ create table my_table(val text);
       expect(result[0].hash).to.equal('5c2371b09ea6c42f8fd00e9f298ad4daa5e0e24f');
     });
 
+    it('should return single changeset with empty name', async () => {
+      const result = ChangesetParser.parseFileContent('file', `--migration
+--changeset
+create table my_table(val text);
+      `);
+
+      expect(result).to.be.have.lengthOf(1);
+      expect(result[0].file).to.equal('file');
+      expect(result[0].name).to.equal('');
+      expect(result[0].context).to.equal(null);
+      expect(result[0].executionType).to.equal('once');
+      expect(result[0].script).to.equal('create table my_table(val text);');
+      expect(result[0].hash).to.equal('5c2371b09ea6c42f8fd00e9f298ad4daa5e0e24f');
+    });
+
     it('should return single changeset with space in the name', async () => {
-      const result = await ChangesetParser.parseFileContent('file', `--migration
+      const result = ChangesetParser.parseFileContent('file', `--migration
 --changeset changeset name
 create table my_table(val text);
       `);
@@ -51,7 +66,7 @@ create table my_table(val text);
     });
 
     it('should return single changeset with type and context', async () => {
-      const result = await ChangesetParser.parseFileContent('file', `--migration
+      const result = ChangesetParser.parseFileContent('file', `--migration
 --changeset changeset name type:once context:test
 create table my_table(val text);
       `);
@@ -65,8 +80,23 @@ create table my_table(val text);
       expect(result[0].hash).to.equal('5c2371b09ea6c42f8fd00e9f298ad4daa5e0e24f');
     });
 
+    it('should return single changeset with type and empty name', async () => {
+      const result = ChangesetParser.parseFileContent('file', `--migration
+--changeset type:once
+create table my_table(val text);
+      `);
+
+      expect(result).to.be.have.lengthOf(1);
+      expect(result[0].file).to.equal('file');
+      expect(result[0].name).to.equal('');
+      expect(result[0].context).to.equal(null);
+      expect(result[0].executionType).to.equal('once');
+      expect(result[0].script).to.equal('create table my_table(val text);');
+      expect(result[0].hash).to.equal('5c2371b09ea6c42f8fd00e9f298ad4daa5e0e24f');
+    });
+
     it('should return multiple changesets', async () => {
-      const result = await ChangesetParser.parseFileContent('file', `--migration
+      const result = ChangesetParser.parseFileContent('file', `--migration
 --changeset changeset:one type:once context:test
 create table my_table(val text);
 
@@ -94,20 +124,20 @@ create table my_other_table2(val text);
     });
 
     it('should throw with empty changeset', async () => {
-      expect(ChangesetParser.parseFileContent('file', `--migration
+      expect(() => ChangesetParser.parseFileContent('file', `--migration
 --changeset empty
-      `)).to.be.rejected;
+      `)).to.throw;
     });
 
     it('should throw with duplicate changeset name', async () => {
-      const promise = ChangesetParser.parseFileContent('file', `--migration
+      const action = () => ChangesetParser.parseFileContent('file', `--migration
 --changeset name
 create table my_table(val text);
 --changeset name
 create table my_table(val text);
       `);
 
-      expect(promise).to.be.rejected;
+      expect(action).to.throw;
     });
   });
 
@@ -115,7 +145,7 @@ create table my_table(val text);
     const basePath = path.resolve(__dirname, '../example/database');
 
     it('should should return absolute file path when no base path is provided', async () => {
-      const result = await ChangesetParser.parseFile(
+      const result = ChangesetParser.parseFile(
         `${path.resolve(basePath, 'migrations/v1.0/tables/20170115T210000-my_table.sql')}`,
       );
 
@@ -124,7 +154,7 @@ create table my_table(val text);
     });
 
     it('should should return relative file path', async () => {
-      const result = await ChangesetParser.parseFile(
+      const result = ChangesetParser.parseFile(
         `${path.resolve(basePath, 'migrations/v1.0/tables/20170115T210000-my_table.sql')}`,
         basePath,
       );

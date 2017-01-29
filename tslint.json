@@ -1,6 +1,7 @@
 {
   "extends": "tslint:latest",
   "rules": {
+    "member-ordering": [false],
     "no-console": [false],
     "object-literal-key-quotes": [false],
     "object-literal-sort-keys": false,

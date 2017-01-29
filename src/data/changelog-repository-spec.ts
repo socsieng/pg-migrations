@@ -53,7 +53,7 @@ describe('ChangelogRepository', async () => {
     });
 
     it('should create changeset', async () => {
-      const [ changeset ] = await ChangesetParser.parseFileContent('file', `--migration
+      const [ changeset ] = await ChangesetParser.parseFileContent(`file_${new Date().valueOf()}`, `--migration
 --changeset name
 create table my_table(val text);
       `);
