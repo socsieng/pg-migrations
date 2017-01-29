@@ -42,27 +42,22 @@ export default class Migration {
     }
 
     try {
-      const validation = await Promise.all(
-        this.changesets.map(async (changeset) => ({
-          changeset,
-          validation: await repository.validateChangeset(changeset),
-        })),
-      );
+      const validation = await this.validate(repository);
 
-      const messages = validation.filter((v) => v.validation.messages.length)
-        .map((v) => `${v.changeset.formatName()}\n${v.validation.messages.map((m) => `  ${m}`).join('\n')}`);
-
-      if (messages.length) {
-        throw new Error(messages.join('\n'));
-      } else {
-        const changesetsToExecute = validation.filter((v) => v.validation.shouldExecute).map((r) => r.changeset);
-        for (const changeset of changesetsToExecute) {
-          await repository.executeChangeset(changeset);
-        }
+      const changesetsToExecute = validation.filter((v) => v.validation.shouldExecute).map((r) => r.changeset);
+      for (const changeset of changesetsToExecute) {
+        await repository.executeChangeset(changeset);
       }
     } finally {
       await repository.releaseLock();
     }
+  }
+
+  public async generateScript (repository: ChangelogRepository): Promise<string> {
+    const validation = await this.validate(repository);
+
+    const changesetsToExecute = validation.filter((v) => v.validation.shouldExecute).map((r) => r.changeset);
+    return changesetsToExecute.map((c) => `-- ${c.formatName()}\n${c.script}`).join('\n\n');
   }
 
   public static async load (filename: string) {
@@ -89,5 +84,25 @@ export default class Migration {
     migration.changesets = getChangesets(config, basePath);
 
     return migration;
+  }
+
+  private async validate (repository: ChangelogRepository) {
+    const validation = await Promise.all(
+      this.changesets.map(async (changeset) => ({
+        changeset,
+        validation: await repository.validateChangeset(changeset),
+      })),
+    );
+
+    const messages = validation.filter((v) => v.validation.messages.length)
+      .map((v) => `${v.changeset.formatName()}\n${v.validation.messages.map((m) => `  ${m}`).join('\n')}`);
+
+    const statements: string[] = [];
+
+    if (messages.length) {
+      throw new Error(messages.join('\n'));
+    }
+
+    return validation;
   }
 }

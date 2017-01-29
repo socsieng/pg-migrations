@@ -73,29 +73,33 @@ describe('Migration', async () => {
     });
   });
 
-  describe('execute', async () => {
-    let dbClient: DbClient;
-    let repo: Repo;
-
-    beforeEach(async () => {
-      dbClient = new DbClient({
-        host: 'localhost',
-        user: 'postgres',
-        password: 'Password01',
-        database: 'postgres',
-        port: 5434,
-      });
-      repo = new Repo(dbClient);
+  describe('execute and generateScript', async () => {
+    const dbClient = new DbClient({
+      host: 'localhost',
+      user: 'postgres',
+      password: 'Password01',
+      database: 'postgres',
+      port: 5434,
     });
+    const repo = new Repo(dbClient);
 
-    afterEach(async () => {
-      dbClient = null;
-      repo = null;
+    it('should generate sql migration script', async () => {
+      const migration = await Migration.load(`${basePath}/schema.yml`);
+      const script = await migration.generateScript(repo);
+
+      expect(script).to.not.be.empty;
     });
 
     it('should execute a migration', async () => {
       const migration = await Migration.load(`${basePath}/schema.yml`);
       await migration.execute(repo);
+    });
+
+    it('should not generate sql migration script when no scripts executed', async () => {
+      const migration = await Migration.load(`${basePath}/schema.yml`);
+      const script = await migration.generateScript(repo);
+
+      expect(script).to.be.empty;
     });
 
     it('should execute same migration again', async () => {

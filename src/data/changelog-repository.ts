@@ -9,6 +9,7 @@ export interface IChangesetValidation {
 export default class ChangelogRepository {
   private client: Client;
   private lockId: number;
+  private tablesPromise: Promise<void>;
 
   constructor (client: Client) {
     this.client = client;
@@ -16,7 +17,7 @@ export default class ChangelogRepository {
   }
 
   public async aquireLock (): Promise<boolean> {
-    await this.createMigrationTables();
+    await this.ensureMigrationTables();
 
     return await this.client.withTransaction(async () => {
       const { locks } = await this.client.querySingle(`
@@ -41,6 +42,8 @@ export default class ChangelogRepository {
   }
 
   public async releaseLock (): Promise<void> {
+    await this.ensureMigrationTables();
+
     await this.client.execute(`
       update migration_lock
       set
@@ -83,6 +86,8 @@ export default class ChangelogRepository {
   }
 
   public async getChangeset (file: string, name: string): Promise<Changeset> {
+    await this.ensureMigrationTables();
+
     return await this.client.querySingle(`
       select
         cs.id,
@@ -101,6 +106,8 @@ export default class ChangelogRepository {
   }
 
   public async executeChangeset (changeset: Changeset) {
+    await this.ensureMigrationTables();
+
     try {
       const response = await this.client.execute(changeset.script);
       await this.insertChangeset(changeset);
@@ -112,6 +119,8 @@ export default class ChangelogRepository {
   }
 
   public async insertChangeset (changeset) {
+    await this.ensureMigrationTables();
+
     const result = await this.client.insert('migration_changesets', {
       file: changeset.file,
       name: changeset.name,
@@ -125,10 +134,16 @@ export default class ChangelogRepository {
     }, 'id');
   }
 
-  private async createMigrationTables () {
-    await this.createLockTable();
-    await this.createChangesetTable();
-    await this.createChangelogTable();
+  private async ensureMigrationTables () {
+    if (!this.tablesPromise) {
+      this.tablesPromise = (async () => {
+        await this.createLockTable();
+        await this.createChangesetTable();
+        await this.createChangelogTable();
+      })();
+    }
+
+    await this.tablesPromise;
   }
 
   private async createLockTable () {
