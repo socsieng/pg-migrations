@@ -15,6 +15,10 @@
   ],
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
+  "bin": {
+    "pg-migration": "./lib/cli.js",
+    "pg-migrations": "./lib/cli.js"
+  },
   "scripts": {
     "clean": "rimraf lib",
     "lint": "tslint --force --format verbose \"src/**/*.ts\"",
@@ -28,11 +32,14 @@
     "test:db:stop": "docker rm pg-migration-postgres -f"
   },
   "dependencies": {
+    "commander": "^2.9.0",
     "fs-promise": "^1.0.0",
     "glob": "^7.1.1",
     "js-yaml": "^3.7.0",
     "pg": "^6.1.2",
-    "pg-parameters": "^0.2.3"
+    "pg-connection-string": "^0.1.3",
+    "pg-parameters": "^0.2.3",
+    "read": "^1.0.7"
   },
   "devDependencies": {
     "@types/chai": "^3.0.0",

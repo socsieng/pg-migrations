@@ -48,6 +48,8 @@ export default class Migration {
       for (const changeset of changesetsToExecute) {
         await repository.executeChangeset(changeset);
       }
+
+      return changesetsToExecute;
     } finally {
       await repository.releaseLock();
     }

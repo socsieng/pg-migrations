@@ -11,8 +11,12 @@ export default class ChangelogRepository {
   private lockId: number;
   private tablesPromise: Promise<void>;
 
-  constructor (client: Client) {
-    this.client = client;
+  constructor (client: Client | any) {
+    if (client instanceof Client) {
+      this.client = client;
+    } else {
+      this.client = new Client(client);
+    }
     this.lockId = 0;
   }
 
