@@ -24,6 +24,7 @@ npm install --global pg-migrations
     -p, --password <password>             database password
     -P, --prompt-password                 prompt for database password
     -s, --generate-script                 output sql script instead of executing the migration
+    --context [contexts]                  changeset contexts to execute
 ```
 
 ## Example

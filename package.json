@@ -1,6 +1,6 @@
 {
   "name": "pg-migrations",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Postgres database migration utility",
   "license": "MIT",
   "repository": "git@github.com:socsieng/pg-migrations.git",

@@ -27,6 +27,19 @@ function getChangesets (config: any, basePath: string): Changeset[] {
   return changesets;
 }
 
+function listContainsAny (list1: any[], list2: any[]): boolean {
+  for (const item of list1) {
+    if (list2.indexOf(item) !== -1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export interface IOptions {
+  context?: string[];
+}
+
 export default class Migration {
   public changesets: Changeset[];
 
@@ -34,7 +47,7 @@ export default class Migration {
     this.changesets = [];
   }
 
-  public async execute (repository: ChangelogRepository) {
+  public async execute (repository: ChangelogRepository, options?: IOptions) {
     const hasLock = await repository.aquireLock();
 
     if (!hasLock) {
@@ -42,24 +55,22 @@ export default class Migration {
     }
 
     try {
-      const validation = await this.validate(repository);
+      const changesets = await this.filterChangesets(repository, options);
 
-      const changesetsToExecute = validation.filter((v) => v.validation.shouldExecute).map((r) => r.changeset);
-      for (const changeset of changesetsToExecute) {
+      for (const changeset of changesets) {
         await repository.executeChangeset(changeset);
       }
 
-      return changesetsToExecute;
+      return changesets;
     } finally {
       await repository.releaseLock();
     }
   }
 
-  public async generateScript (repository: ChangelogRepository): Promise<string> {
-    const validation = await this.validate(repository);
+  public async generateScript (repository: ChangelogRepository, options?: IOptions): Promise<string> {
+    const changesets = await this.filterChangesets(repository, options);
 
-    const changesetsToExecute = validation.filter((v) => v.validation.shouldExecute).map((r) => r.changeset);
-    return changesetsToExecute.map((c) => `-- ${c.formatName()}\n${c.script}`).join('\n\n');
+    return changesets.map((c) => `-- ${c.formatName()}\n${c.script}`).join('\n\n');
   }
 
   public static async load (filename: string) {
@@ -88,15 +99,17 @@ export default class Migration {
     return migration;
   }
 
-  private async validate (repository: ChangelogRepository) {
+  private async filterChangesets (repository: ChangelogRepository, options: IOptions) {
     const validation = await Promise.all(
       this.changesets.map(async (changeset) => ({
         changeset,
         validation: await repository.validateChangeset(changeset),
       })),
     );
+    const { context = null } = options || {};
 
-    const messages = validation.filter((v) => v.validation.messages.length)
+    const messages = validation
+      .filter((v) => v.validation.messages.length)
       .map((v) => `${v.changeset.formatName()}\n${v.validation.messages.map((m) => `  ${m}`).join('\n')}`);
 
     const statements: string[] = [];
@@ -105,6 +118,10 @@ export default class Migration {
       throw new Error(messages.join('\n'));
     }
 
-    return validation;
+    return validation.filter((v) => v.validation.shouldExecute)
+      .filter((v) => !context
+        || !v.changeset.context
+        || listContainsAny(v.changeset.context.split(/\s*,\s*/), context))
+      .map((v) => v.changeset);
   }
 }
