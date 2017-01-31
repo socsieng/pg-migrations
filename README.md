@@ -1,5 +1,7 @@
 # Postgres Migrations
 
+[![Build Status](https://travis-ci.org/socsieng/pg-migrations.svg?branch=master)](https://travis-ci.org/socsieng/pg-migrations)
+
 The purpose of this library is to provide `liquibase` *like* migration capabilities as a `node` module and command line interface.
 
 ## Installation
